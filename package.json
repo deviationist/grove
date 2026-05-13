@@ -1,0 +1,22 @@
+{
+  "name": "grove",
+  "version": "0.1.0",
+  "description": "Stacked branch visualizer for GitHub PRs",
+  "bin": {
+    "grove": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
