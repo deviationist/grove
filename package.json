@@ -1,6 +1,6 @@
 {
   "name": "@deviationist/grove",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stacked branch visualizer for GitHub PRs",
   "license": "MIT",
   "author": "deviationist",
