@@ -17,6 +17,10 @@ interface NodeLine {
   note: string;
 }
 
+function hyperlink(text: string, url: string): string {
+  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+}
+
 function icon(node: TreeNode): string {
   switch (node.status) {
     case 'merged': return '✅';
@@ -83,7 +87,8 @@ function collectLines(
       : colorize(node, node.branch);
 
     const prRaw = node.pr ? `#${node.pr.number}` : '';
-    const pr    = node.pr ? chalk.dim(`#${node.pr.number}`) : '';
+    const prText = node.pr ? chalk.dim(`#${node.pr.number}`) : '';
+    const pr     = node.pr?.url ? chalk.dim(hyperlink(`#${node.pr.number}`, node.pr.url)) : prText;
 
     const statusLabel = node.status === 'no-pr' ? 'local' : node.status;
     const remoteMark  = node.remote ? chalk.dim('  · not local') : '';

@@ -36,6 +36,11 @@ function t(text, color, bold = false) {
   return `<tspan fill="${color}"${w}>${esc(text)}</tspan>`;
 }
 
+/** Clickable PR link wrapping a tspan */
+function prLink(text, color, url) {
+  return `<a href="${url}" target="_blank"><tspan fill="${color}" text-decoration="underline">${esc(text)}</tspan></a>`;
+}
+
 /** Repeated spaces (dim, effectively invisible) */
 const sp = n => t(' '.repeat(n), C.dim);
 
@@ -61,30 +66,30 @@ const LINES = [
 
   // ├── PLAT-12-auth-service-extract   len=32  pad=6
   t('├── ', C.tree) + t('PLAT-12-auth-service-extract', C.green) +
-    sp(6) + t('#1021', C.dim) + sp(2) + t('✅ merged', C.green),
+    sp(6) + prLink('#1021', C.dim, 'https://github.com/acme/frontend/pull/1021') + sp(2) + t('✅ merged', C.green),
 
   // ├── PLAT-12-auth-token-refresh     len=30  pad=8
   t('├── ', C.tree) + t('PLAT-12-auth-token-refresh', C.green) +
-    sp(8) + t('#1022', C.dim) + sp(2) + t('✅ merged', C.green),
+    sp(8) + prLink('#1022', C.dim, 'https://github.com/acme/frontend/pull/1022') + sp(2) + t('✅ merged', C.green),
 
   // ├── PLAT-12-user-profile-api       len=28  pad=10
   t('├── ', C.tree) + t('PLAT-12-user-profile-api', C.gray) +
-    sp(10) + t('#1023', C.dim) + sp(2) + t('◐ draft', C.gray) +
+    sp(10) + prLink('#1023', C.dim, 'https://github.com/acme/frontend/pull/1023') + sp(2) + t('◐ draft', C.gray) +
     t('  ← request review', C.white, true),
 
   // │   └── PLAT-12-user-profile-ui   len=31  pad=7
   t('│   ', C.tree) + t('└── ', C.tree) + t('PLAT-12-user-profile-ui', C.gray) +
-    sp(7) + t('#1024', C.dim) + sp(2) + t('◐ draft', C.gray) +
+    sp(7) + prLink('#1024', C.dim, 'https://github.com/acme/frontend/pull/1024') + sp(2) + t('◐ draft', C.gray) +
     t('  blocked', C.dim),
 
   // ├── PLAT-12-settings-panel ◀       len=28  pad=10
   t('├── ', C.tree) + t('PLAT-12-settings-panel', C.gray, true) + t(' ◀', C.dim) +
-    sp(10) + t('#1031', C.dim) + sp(2) + t('◐ draft', C.gray) +
+    sp(10) + prLink('#1031', C.dim, 'https://github.com/acme/frontend/pull/1031') + sp(2) + t('◐ draft', C.gray) +
     t('  ← request review', C.white, true),
 
   // │   └── PLAT-12-settings-panel-tests  len=36  pad=2
   t('│   ', C.tree) + t('└── ', C.tree) + t('PLAT-12-settings-panel-tests', C.gray) +
-    sp(2) + t('#1032', C.dim) + sp(2) + t('◐ draft', C.gray) +
+    sp(2) + prLink('#1032', C.dim, 'https://github.com/acme/frontend/pull/1032') + sp(2) + t('◐ draft', C.gray) +
     t('  blocked', C.dim) + t('  ⚠ needs rebase', C.yellow),
 
   // └── chore/update-deps              len=21  pad=17+7=24 (no PR)
