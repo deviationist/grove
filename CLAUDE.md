@@ -29,14 +29,14 @@ grove/
 ## Target output
 
 ```
-grove  ·  cognitedata/fusion
+grove  ·  acme/my-app
 ──────────────────────────────────────────────────────
-master
-├── FO-3435-action-menu-escape-hatches      #23143 ✅ merged
-├── FO-3435-checklist-status-modals         #23144 ✅ merged
-└── FO-3435-checklist-table-toolbar-component  #23659 ◐ draft   ← request review
-    └── FO-3435-checklist-table-toolbar-tests  #23660 ◐ draft   blocked
-        └── FO-3435-checklist-bulk-status-wiring  #23146 ◐ draft   blocked
+main
+├── FEAT-101-auth-login-page                #101 ✅ merged
+├── FEAT-101-auth-signup-form               #102 ✅ merged
+└── FEAT-101-auth-password-reset            #103 ◐ draft   ← request review
+    └── FEAT-101-auth-password-reset-tests  #104 ◐ draft   blocked
+        └── FEAT-101-auth-email-integration #105 ◐ draft   blocked
 ──────────────────────────────────────────────────────
 1 ready for review  ·  2 blocked  ·  2 merged
 ```
