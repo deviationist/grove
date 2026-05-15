@@ -130,6 +130,28 @@ If one of your local PRs targets a branch you don't have checked out locally
 detect it, fetch its PR metadata, and include it as a `· not local` node in
 the tree so the stack structure is preserved.
 
+## Alternatives
+
+Several tools exist for working with stacked PRs. Grove's niche is **read-only local visualisation** — no account, no workflow changes, just a clear picture of what you already have.
+
+| Tool | Type | Account required | Manages stacking | Open source |
+|------|------|-----------------|-----------------|-------------|
+| **grove** | Local CLI | No | No — view only | Yes |
+| [Graphite](https://graphite.dev) | SaaS + CLI | Yes | Yes | No |
+| [Aviator](https://aviator.co) | SaaS | Yes | Yes | No |
+| [spr](https://github.com/ejoffe/spr) | Local CLI | No | Yes | Yes |
+| [ghstack](https://github.com/ezyang/ghstack) | Local CLI | No | Yes | Yes |
+| [git-branchless](https://github.com/arxanas/git-branchless) | Local CLI | No | Yes | Yes |
+| GitHub native | Web | — | No | — |
+
+**Graphite and Aviator** are full stacking platforms — they automate rebasing, update base branches, and provide dashboards. Powerful, but require a SaaS account and adopting their specific workflow.
+
+**spr and ghstack** are local CLI tools that actively *manage* your stack — pushing commits, updating branches, and syncing with GitHub. They require you to work through their tooling rather than plain `git`.
+
+**git-branchless** is a powerful local tool focused on commit-graph workflows. It can model stacks but has a steeper learning curve and a different mental model than branch-based GitHub PRs.
+
+**grove** does none of the managing — it only reads. The upside is that it works with however you already structure your branches and PRs, requires no signup, and imposes no new workflow. If you want to *see* your stack clearly without changing how you work, that's what grove is for.
+
 ## Tech stack
 
 - **Node.js + TypeScript**, bundled with `esbuild`
