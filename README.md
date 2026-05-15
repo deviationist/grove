@@ -6,6 +6,8 @@ for review next.
 
 GitHub's PR list is flat. Branch names don't tell you the order. Grove fixes that.
 
+![grove output](./docs/screenshot.svg)
+
 ```
 grove  ·  acme/frontend  @alice
 ──────────────────────────────────────────────────────
