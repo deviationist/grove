@@ -1,15 +1,29 @@
 {
-  "name": "grove",
+  "name": "@deviationist/grove",
   "version": "0.1.0",
   "description": "Stacked branch visualizer for GitHub PRs",
+  "license": "MIT",
+  "author": "deviationist",
+  "homepage": "https://github.com/deviationist/grove",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deviationist/grove.git"
+  },
+  "bugs": {
+    "url": "https://github.com/deviationist/grove/issues"
+  },
   "bin": {
     "grove": "./dist/index.js"
   },
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "build": "node build.mjs",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "screenshot": "node scripts/generate-screenshot.mjs"
+    "screenshot": "node scripts/generate-screenshot.mjs",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "chalk": "^4.1.2"
@@ -19,5 +33,15 @@
     "esbuild": "^0.20.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "git",
+    "github",
+    "stacked-prs",
+    "pull-requests",
+    "cli"
+  ]
 }
