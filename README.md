@@ -7,18 +7,18 @@ for review next.
 GitHub's PR list is flat. Branch names don't tell you the order. Grove fixes that.
 
 ```
-grove  ·  cognitedata/fusion  @deviationist
+grove  ·  acme/frontend  @alice
 ──────────────────────────────────────────────────────
-master
-├── FO-3435-action-menu-content-agnostic      #23143  ✅ merged
-├── FO-3435-checklist-status-confirmation-modals  #23144  ✅ merged
-├── FO-3435-checklist-table-toolbar           #23145  ◐ draft  ← request review
-│   └── FO-3435-checklist-bulk-status-wiring  #23146  ◐ draft  blocked
-├── FO-3435-checklist-table-toolbar-component ◀  #23659  ◐ draft  ← request review
-│   └── FO-3435-checklist-table-toolbar-tests  #23660  ◐ draft  blocked
-└── FO-3435-status-bulk-update-on-overview-page  #22797  ◐ draft  blocked  ⚠ needs rebase
+main
+├── PLAT-12-auth-service-extract       #1021  ✅ merged
+├── PLAT-12-auth-token-refresh         #1022  ✅ merged
+├── PLAT-12-user-profile-api           #1023  ◐ draft  ← request review
+│   └── PLAT-12-user-profile-ui        #1024  ◐ draft  blocked
+├── PLAT-12-settings-panel ◀           #1031  ◐ draft  ← request review
+│   └── PLAT-12-settings-panel-tests   #1032  ◐ draft  blocked  ⚠ needs rebase
+└── chore/update-deps                  ○ local  ← open PR  ⚠ needs rebase
 ──────────────────────────────────────────────────────
-2 ready for review  ·  1 needs rebase  ·  3 blocked  ·  2 merged
+2 ready for review  ·  2 needs rebase  ·  2 blocked  ·  2 merged
 ```
 
 ## How it works
@@ -88,7 +88,7 @@ The header shows `@your-login` to confirm the filter is active.
 ### Filter by keyword
 
 ```bash
-grove FO-3435
+grove PLAT-12
 ```
 
 Filters branches by name or PR title (case-insensitive). Works alongside
@@ -105,15 +105,15 @@ Disables the author filter — shows every local branch and its PR state.
 ### Filter by a specific author
 
 ```bash
-grove --author somelogin
+grove --author bob
 ```
 
-Shows branches whose PRs were opened by `somelogin`.
+Shows branches whose PRs were opened by `bob`.
 
 ### Combine filters
 
 ```bash
-grove --author alice FO-3435
+grove --author bob PLAT-12
 ```
 
 ## Understanding the tree
