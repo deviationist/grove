@@ -1,4 +1,4 @@
-import { Branch, findParent } from './git';
+import { Branch, findParent, getMergeBaseAsync } from './git';
 import { PRInfo } from './github';
 
 export type BranchStatus = 'merged' | 'open' | 'draft' | 'no-pr';
@@ -10,6 +10,7 @@ export interface TreeNode {
   pr: PRInfo | null;
   children: TreeNode[];
   status: BranchStatus;
+  remote: boolean;
 }
 
 export interface TreeResult {
@@ -29,11 +30,13 @@ function sortNodes(nodes: TreeNode[]): void {
   for (const n of nodes) sortNodes(n.children);
 }
 
-export function buildTree(
+export async function buildTree(
   branches: Branch[],
   trunk: string,
   prMap: Map<string, PRInfo>
-): TreeResult {
+): Promise<TreeResult> {
+  const branchSet = new Set(branches.map(b => b.name));
+  const tipByName = new Map(branches.map(b => [b.name, b.tip]));
   const nodeMap = new Map<string, TreeNode>();
 
   for (const branch of branches) {
@@ -46,16 +49,40 @@ export function buildTree(
       pr,
       children: [],
       status: statusFromPR(pr),
+      remote: !!branch.remote,
     });
   }
 
+  // Pass 1: determine parents (sync; findParent only for no-PR branches)
   const nonTrunk = branches.filter(b => b.name !== trunk);
   for (const branch of nonTrunk) {
-    const { parent, needsRebase } = findParent(branch, branches, trunk);
     const node = nodeMap.get(branch.name)!;
-    node.parent = parent;
-    node.needsRebase = needsRebase;
+    const pr = prMap.get(branch.name);
+
+    let parentName: string;
+    if (pr && pr.baseRef !== trunk && branchSet.has(pr.baseRef)) {
+      parentName = pr.baseRef;
+    } else if (pr) {
+      parentName = trunk;
+    } else {
+      const { parent } = findParent(branch, branches, trunk);
+      parentName = parent;
+    }
+    node.parent = parentName;
   }
+
+  // Pass 2: needsRebase checks — run all git merge-base calls in parallel
+  await Promise.all(
+    nonTrunk
+      .filter(b => !b.remote && b.tip)
+      .map(async branch => {
+        const node = nodeMap.get(branch.name)!;
+        const parentTip = tipByName.get(node.parent);
+        if (!parentTip) return;
+        const mb = await getMergeBaseAsync(branch.tip, parentTip);
+        node.needsRebase = mb !== parentTip;
+      })
+  );
 
   const roots: TreeNode[] = [];
   for (const node of nodeMap.values()) {
