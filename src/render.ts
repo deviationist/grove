@@ -8,6 +8,15 @@ interface Stats {
   rebase: number;
 }
 
+interface NodeLine {
+  leftRaw: string;     // prefix + connector + plain name (for width calculation)
+  leftColored: string; // prefix + connector + chalked name
+  prRaw: string;       // "#12345" or "" (for width calculation)
+  pr: string;          // dim "#12345" or ""
+  badge: string;
+  note: string;
+}
+
 function icon(node: TreeNode): string {
   switch (node.status) {
     case 'merged': return '✅';
@@ -30,7 +39,7 @@ function ancestorsAllMerged(node: TreeNode, nodeMap: Map<string, TreeNode>): boo
   let p = node.parent;
   while (p) {
     const parent = nodeMap.get(p);
-    if (!parent) break; // reached trunk
+    if (!parent) break;
     if (parent.status !== 'merged') return false;
     p = parent.parent;
   }
@@ -53,34 +62,45 @@ function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats):
   return chalk.dim('  blocked') + rebase;
 }
 
-function renderNode(
-  node: TreeNode,
+function collectLines(
+  nodes: TreeNode[],
   nodeMap: Map<string, TreeNode>,
   prefix: string,
-  isLast: boolean,
   currentBranch: string,
-  stats: Stats
-): string[] {
-  const connector   = isLast ? '└── ' : '├── ';
-  const childPrefix = prefix + (isLast ? '    ' : '│   ');
+  stats: Stats,
+  out: NodeLine[]
+): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const isLast = i === nodes.length - 1;
+    const connector = isLast ? '└── ' : '├── ';
+    const childPrefix = prefix + (isLast ? '    ' : '│   ');
 
-  const isCurrent = node.branch === currentBranch;
-  const prNum     = node.pr ? chalk.dim(`  #${node.pr.number}`) : '';
-  const name      = isCurrent
-    ? chalk.bold(colorize(node, node.branch)) + chalk.dim(' ◀')
-    : colorize(node, node.branch);
-  const statusLabel = node.status === 'no-pr' ? 'local' : node.status;
-  const remoteMark  = node.remote ? chalk.dim('  · not local') : '';
-  const badge       = colorize(node, `${icon(node)} ${statusLabel}`) + remoteMark;
-  const note        = annotate(node, nodeMap, stats);
+    const isCurrent = node.branch === currentBranch;
+    const rawName = isCurrent ? `${node.branch} ◀` : node.branch;
+    const coloredName = isCurrent
+      ? chalk.bold(colorize(node, node.branch)) + chalk.dim(' ◀')
+      : colorize(node, node.branch);
 
-  const line = `${prefix}${connector}${name}${prNum}  ${badge}${note}`;
+    const prRaw = node.pr ? `#${node.pr.number}` : '';
+    const pr    = node.pr ? chalk.dim(`#${node.pr.number}`) : '';
 
-  const childLines = node.children.flatMap((child, i) =>
-    renderNode(child, nodeMap, childPrefix, i === node.children.length - 1, currentBranch, stats)
-  );
+    const statusLabel = node.status === 'no-pr' ? 'local' : node.status;
+    const remoteMark  = node.remote ? chalk.dim('  · not local') : '';
+    const badge = colorize(node, `${icon(node)} ${statusLabel}`) + remoteMark;
+    const note  = annotate(node, nodeMap, stats);
 
-  return [line, ...childLines];
+    out.push({
+      leftRaw:     prefix + connector + rawName,
+      leftColored: prefix + connector + coloredName,
+      prRaw,
+      pr,
+      badge,
+      note,
+    });
+
+    collectLines(node.children, nodeMap, childPrefix, currentBranch, stats, out);
+  }
 }
 
 export function render(
@@ -107,18 +127,29 @@ export function render(
   if (roots.length === 0) {
     console.log(chalk.dim('  (no local branches)'));
   } else {
-    const lines = roots.flatMap((root, i) =>
-      renderNode(root, nodeMap, '', i === roots.length - 1, currentBranch, stats)
-    );
-    console.log(lines.join('\n'));
+    const lines: NodeLine[] = [];
+    collectLines(roots, nodeMap, '', currentBranch, stats, lines);
+
+    const maxLeft = Math.max(...lines.map(l => l.leftRaw.length));
+    const maxPr   = Math.max(...lines.map(l => l.prRaw.length));
+
+    const rendered = lines.map(l => {
+      const namePad = ' '.repeat(maxLeft - l.leftRaw.length + 2);
+      const prCol   = l.pr
+        ? l.pr + ' '.repeat(maxPr - l.prRaw.length + 2)
+        : ' '.repeat(maxPr + 2);
+      return `${l.leftColored}${namePad}${prCol}${l.badge}${l.note}`;
+    });
+
+    console.log(rendered.join('\n'));
   }
 
   console.log(sep);
 
   const parts: string[] = [];
-  if (stats.ready   > 0) parts.push(chalk.bold.white(`${stats.ready} ready for review`));
-  if (stats.rebase  > 0) parts.push(chalk.yellow(`${stats.rebase} needs rebase`));
+  if (stats.ready  > 0) parts.push(chalk.bold.white(`${stats.ready} ready for review`));
+  if (stats.rebase > 0) parts.push(chalk.yellow(`${stats.rebase} needs rebase`));
   if (stats.blocked > 0) parts.push(chalk.dim(`${stats.blocked} blocked`));
-  if (stats.merged  > 0) parts.push(chalk.green(`${stats.merged} merged`));
-  if (parts.length  > 0) console.log(parts.join(chalk.dim('  ·  ')));
+  if (stats.merged > 0) parts.push(chalk.green(`${stats.merged} merged`));
+  if (parts.length > 0) console.log(parts.join(chalk.dim('  ·  ')));
 }
