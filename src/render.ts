@@ -9,7 +9,6 @@ interface Stats {
 }
 
 function icon(node: TreeNode): string {
-  if (node.needsRebase) return '⚠';
   switch (node.status) {
     case 'merged': return '✅';
     case 'open':   return '●';
@@ -19,7 +18,6 @@ function icon(node: TreeNode): string {
 }
 
 function colorize(node: TreeNode, text: string): string {
-  if (node.needsRebase) return chalk.yellow(text);
   switch (node.status) {
     case 'merged': return chalk.green(text);
     case 'open':   return chalk.blue(text);
@@ -40,21 +38,19 @@ function ancestorsAllMerged(node: TreeNode, nodeMap: Map<string, TreeNode>): boo
 }
 
 function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats): string {
-  if (node.needsRebase) {
-    stats.rebase++;
-    return chalk.yellow('  ⚠ needs rebase');
-  }
   if (node.status === 'merged') {
     stats.merged++;
     return '';
   }
+  const rebase = node.needsRebase ? chalk.yellow('  ⚠ needs rebase') : '';
+  if (node.needsRebase) stats.rebase++;
   if (ancestorsAllMerged(node, nodeMap)) {
     stats.ready++;
     const label = node.status === 'no-pr' ? '← open PR' : '← request review';
-    return chalk.bold.white(`  ${label}`);
+    return chalk.bold.white(`  ${label}`) + rebase;
   }
   stats.blocked++;
-  return chalk.dim('  blocked');
+  return chalk.dim('  blocked') + rebase;
 }
 
 function renderNode(
@@ -73,8 +69,10 @@ function renderNode(
   const name      = isCurrent
     ? chalk.bold(colorize(node, node.branch)) + chalk.dim(' ◀')
     : colorize(node, node.branch);
-  const badge     = colorize(node, `${icon(node)} ${node.status === 'no-pr' ? 'local' : node.status}`);
-  const note      = annotate(node, nodeMap, stats);
+  const statusLabel = node.status === 'no-pr' ? 'local' : node.status;
+  const remoteMark  = node.remote ? chalk.dim('  · not local') : '';
+  const badge       = colorize(node, `${icon(node)} ${statusLabel}`) + remoteMark;
+  const note        = annotate(node, nodeMap, stats);
 
   const line = `${prefix}${connector}${name}${prNum}  ${badge}${note}`;
 
@@ -90,11 +88,17 @@ export function render(
   trunk: string,
   ownerRepo: string,
   nodeMap: Map<string, TreeNode>,
-  currentBranch: string
+  currentBranch: string,
+  filter?: string,
+  author?: string
 ): void {
   const sep = chalk.dim('─'.repeat(54));
 
-  console.log(chalk.bold(`grove  ·  ${ownerRepo}`));
+  const tags = [filter && `[${filter}]`, author && `@${author}`]
+    .filter(Boolean)
+    .join('  ');
+  const header = chalk.bold(`grove  ·  ${ownerRepo}`) + (tags ? chalk.dim(`  ${tags}`) : '');
+  console.log(header);
   console.log(sep);
   console.log(chalk.bold(trunk));
 

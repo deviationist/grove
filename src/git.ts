@@ -1,8 +1,9 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, execFile } from 'child_process';
 
 export interface Branch {
   name: string;
   tip: string;
+  remote?: boolean; // true for branches that exist on GitHub but not checked out locally
 }
 
 export interface ParentInfo {
@@ -71,6 +72,14 @@ export function getMergeBase(a: string, b: string): string | null {
   } catch {
     return null; // no common ancestor
   }
+}
+
+export function getMergeBaseAsync(a: string, b: string): Promise<string | null> {
+  return new Promise(resolve => {
+    execFile('git', ['merge-base', a, b], { encoding: 'utf8' }, (err, stdout) => {
+      resolve(err ? null : stdout.trim());
+    });
+  });
 }
 
 export function countCommits(from: string, to: string): number {

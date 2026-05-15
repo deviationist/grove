@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, execFile } from 'child_process';
 
 export interface PRInfo {
   number: number;
@@ -8,6 +8,8 @@ export interface PRInfo {
   draft: boolean;
   url: string;
   headRef: string;
+  baseRef: string;
+  authorLogin: string;
 }
 
 function getToken(): string {
@@ -30,7 +32,22 @@ function toPRInfo(pr: any): PRInfo {
     draft: pr.draft,
     url: pr.html_url,
     headRef: pr.head.ref,
+    baseRef: pr.base.ref,
+    authorLogin: pr.user?.login ?? '',
   };
+}
+
+export function fetchCurrentUser(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'gh', ['api', 'user', '--jq', '.login'],
+      { encoding: 'utf8' },
+      (err, stdout) => {
+        if (err) reject(new Error('Could not fetch GitHub user. Run: gh auth login'));
+        else resolve(stdout.trim());
+      }
+    );
+  });
 }
 
 async function ghFetch(url: string, headers: Record<string, string>): Promise<any[]> {
