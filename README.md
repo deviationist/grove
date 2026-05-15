@@ -43,12 +43,7 @@ The tree is built from `base.ref` chains. If PR B targets branch A, B is a child
 **Requirements:** Node.js 18+, [GitHub CLI (`gh`)](https://cli.github.com/) authenticated.
 
 ```bash
-# Clone and install globally
-git clone git@github.com:deviationist/grove.git
-cd grove
-npm install
-npm run build
-npm install -g .
+npm install -g @deviationist/grove
 ```
 
 Then run from anywhere inside a git repository:
