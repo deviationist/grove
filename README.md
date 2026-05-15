@@ -52,6 +52,16 @@ Then run from anywhere inside a git repository:
 grove
 ```
 
+### Local development / forking
+
+```bash
+git clone git@github.com:deviationist/grove.git
+cd grove
+npm install
+npm run build
+npm install -g .
+```
+
 ## Usage
 
 ```
