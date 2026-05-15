@@ -2,11 +2,12 @@
 // Generates docs/screenshot.svg — the colored terminal example used in README.md.
 // Run: node scripts/generate-screenshot.mjs
 
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const { version } = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'));
 
 // ── Catppuccin Mocha palette ──────────────────────────────────────────────────
 const C = {
@@ -138,6 +139,7 @@ ${textLines}
 `;
 
 mkdirSync(resolve(ROOT, 'docs'), { recursive: true });
-const out = resolve(ROOT, 'docs/screenshot.svg');
+const filename = `screenshot-v${version}.svg`;
+const out = resolve(ROOT, `docs/${filename}`);
 writeFileSync(out, svg, 'utf8');
-console.log(`✓  docs/screenshot.svg  (${W}×${H}px)`);
+console.log(`✓  docs/${filename}  (${W}×${H}px)`);
