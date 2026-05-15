@@ -2,7 +2,8 @@
 // Generates docs/screenshot.svg — the colored terminal example used in README.md.
 // Run: node scripts/generate-screenshot.mjs
 
-import { writeFileSync, mkdirSync, readFileSync } from 'fs';
+import { writeFileSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -138,8 +139,22 @@ ${textLines}
 </svg>
 `;
 
-mkdirSync(resolve(ROOT, 'docs'), { recursive: true });
-const filename = `screenshot-v${version}.svg`;
-const out = resolve(ROOT, `docs/${filename}`);
+const docsDir = resolve(ROOT, 'docs');
+mkdirSync(docsDir, { recursive: true });
+
+// Remove old screenshots before writing the new one
+for (const f of readdirSync(docsDir)) {
+  if (/^screenshot-v.+\.svg$/.test(f)) unlinkSync(resolve(docsDir, f));
+}
+
+const hash = randomBytes(3).toString('hex');
+const filename = `screenshot-v${version}-${hash}.svg`;
+const out = resolve(docsDir, filename);
 writeFileSync(out, svg, 'utf8');
+
+// Keep README in sync
+const readmePath = resolve(ROOT, 'README.md');
+const readme = readFileSync(readmePath, 'utf8');
+writeFileSync(readmePath, readme.replace(/screenshot-v[^)]+\.svg/, filename), 'utf8');
+
 console.log(`✓  docs/${filename}  (${W}×${H}px)`);
