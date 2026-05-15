@@ -13,7 +13,7 @@
     "url": "https://github.com/deviationist/grove/issues"
   },
   "bin": {
-    "grove": "./dist/index.js"
+    "grove": "dist/index.js"
   },
   "files": [
     "dist/"
