@@ -8,21 +8,6 @@ GitHub's PR list is flat. Branch names don't tell you the order. Grove fixes tha
 
 ![grove output](./docs/screenshot.svg)
 
-```
-grove  ·  acme/frontend  @alice
-──────────────────────────────────────────────────────
-main
-├── PLAT-12-auth-service-extract       #1021  ✅ merged
-├── PLAT-12-auth-token-refresh         #1022  ✅ merged
-├── PLAT-12-user-profile-api           #1023  ◐ draft  ← request review
-│   └── PLAT-12-user-profile-ui        #1024  ◐ draft  blocked
-├── PLAT-12-settings-panel ◀           #1031  ◐ draft  ← request review
-│   └── PLAT-12-settings-panel-tests   #1032  ◐ draft  blocked  ⚠ needs rebase
-└── chore/update-deps                  ○ local  ← open PR  ⚠ needs rebase
-──────────────────────────────────────────────────────
-2 ready for review  ·  2 needs rebase  ·  2 blocked  ·  2 merged
-```
-
 ## How it works
 
 Grove combines two sources of truth:
