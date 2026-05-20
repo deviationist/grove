@@ -1,4 +1,5 @@
-import { execFile } from 'child_process';
+import { execFile, execSync } from 'child_process';
+import { readFileSync } from 'fs';
 import {
   getRepoRoot,
   getRemoteUrl,
@@ -14,6 +15,20 @@ import { render, RenderFormat } from './render';
 import { buildJsonOutput } from './json';
 import { loadConfig } from './config';
 import { startSpinner } from './spinner';
+
+function isUnderRtk(): boolean {
+  if (process.env.RTK) return true;
+  try {
+    const ppid = process.ppid;
+    if (process.platform === 'linux') {
+      return readFileSync(`/proc/${ppid}/comm`, 'utf8').trim() === 'rtk';
+    }
+    if (process.platform === 'darwin') {
+      return execSync(`ps -p ${ppid} -o comm=`, { encoding: 'utf8' }).trim().endsWith('rtk');
+    }
+  } catch { /* unsupported platform or permission issue — ignore */ }
+  return false;
+}
 
 const HELP = `
 grove — stacked PR visualizer
@@ -288,13 +303,16 @@ async function main() {
     const checksEnabled = config.checks && !noChecks;
     const format: RenderFormat = tableFormat ? 'table' : config.format;
 
+    // Auto-enable JSON when running under rtk (unless user explicitly chose a visual format)
+    const effectiveJsonOutput = jsonOutput || (!tableFormat && !watch && isUnderRtk());
+
     const remoteUrl = getRemoteUrl();
     const { owner, repo } = parseOwnerRepo(remoteUrl);
     const trunk = getTrunk();
 
     if (watch) {
       process.once('SIGINT', () => { process.stdout.write('\n'); process.exit(130); });
-      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, jsonOutput, interval, format);
+      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, effectiveJsonOutput, interval, format);
       return;
     }
 
@@ -321,7 +339,7 @@ async function main() {
       return;
     }
 
-    if (jsonOutput) {
+    if (effectiveJsonOutput) {
       const out = buildJsonOutput(roots, nodeMap, trunk, `${owner}/${repo}`);
       process.stdout.write(JSON.stringify(out, null, prettyJson ? 2 : 0) + '\n');
       return;
