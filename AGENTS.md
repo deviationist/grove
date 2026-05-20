@@ -64,12 +64,14 @@ stack context, not just the branch in isolation:
 | `needs_rebase` | Parent branch has new commits not in this branch | `git rebase <parent>` — do this first, it unblocks everything downstream |
 | `fix_ci` | CI is failing on this branch | Investigate and fix — a failing branch blocks everything downstream |
 | `address_review` | A reviewer has requested changes | Address the feedback and re-request review |
-| `request_review` | All ancestors merged, CI passing, PR is open or draft | Mark ready for review and request reviewers |
+| `request_review` | All ancestors merged, CI passing, no blockers — ready | Mark ready for review and request reviewers |
 | `create_pr` | All ancestors merged, no PR exists yet | Open a PR targeting the parent branch |
 | `blocked` | One or more ancestors are not yet merged | Check `blockedBy` — work on those first |
 | `merged` | PR is merged | Nothing to do |
 
-Priority order: `needs_rebase` > `fix_ci` > `address_review` > `request_review` > `create_pr` > `blocked` > `merged`
+**Priority order:** `needs_rebase` → `fix_ci` → `address_review` → `request_review` → `create_pr` → `blocked` → `merged`
+
+The `prioritized` array in `--json` output is sorted by this order — index 0 is always the highest-leverage action.
 
 Priority order: `needs_rebase` > `request_review` > `create_pr` > `blocked` > `merged`
 
