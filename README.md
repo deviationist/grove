@@ -167,8 +167,8 @@ highest-leverage action right now.
 Combine with other flags to scope the output:
 
 ```bash
-grove --json --all          # all authors
-grove --json PLAT-12        # filtered by keyword
+grove --json --all                    # all authors
+grove --json PLAT-12                  # filtered by keyword
 grove --json | jq '.prioritized[0]'   # top action
 ```
 
