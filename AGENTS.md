@@ -62,10 +62,14 @@ stack context, not just the branch in isolation:
 | Value | What it means | Suggested next step |
 |-------|--------------|---------------------|
 | `needs_rebase` | Parent branch has new commits not in this branch | `git rebase <parent>` — do this first, it unblocks everything downstream |
-| `request_review` | All ancestors merged, PR is open or draft | Mark ready for review and request reviewers |
+| `fix_ci` | CI is failing on this branch | Investigate and fix — a failing branch blocks everything downstream |
+| `address_review` | A reviewer has requested changes | Address the feedback and re-request review |
+| `request_review` | All ancestors merged, CI passing, PR is open or draft | Mark ready for review and request reviewers |
 | `create_pr` | All ancestors merged, no PR exists yet | Open a PR targeting the parent branch |
 | `blocked` | One or more ancestors are not yet merged | Check `blockedBy` — work on those first |
 | `merged` | PR is merged | Nothing to do |
+
+Priority order: `needs_rebase` > `fix_ci` > `address_review` > `request_review` > `create_pr` > `blocked` > `merged`
 
 Priority order: `needs_rebase` > `request_review` > `create_pr` > `blocked` > `merged`
 
@@ -174,9 +178,19 @@ This runs `grove --json` before each tool call and surfaces the output as
 additional context — so Claude always knows your current stack state without
 you having to paste it manually.
 
-## Future fields
+## Disabling checks
 
-`ci` and `reviews` are present in the JSON but currently `null`. When grove
-gains CI and review integration, these will be populated automatically and
-the `action` field priority logic will incorporate them (e.g. `fix_ci` will
-rank above `request_review`).
+CI and review state are fetched by default. To skip them (faster, offline-friendly):
+
+```bash
+grove --no-checks --json
+```
+
+Or permanently for a repo via `.grove.json`:
+
+```json
+{ "checks": false }
+```
+
+When checks are disabled, `ci` and `reviews` in the JSON output will be
+`null`, and `fix_ci` / `address_review` actions will never appear.

@@ -172,6 +172,26 @@ grove --json | jq '.prioritized[0]'   # top action
 
 See [AGENTS.md](./AGENTS.md) for how to use this output as LLM context.
 
+### Skipping CI and review checks
+
+By default grove fetches CI state and review status for each open branch,
+which makes the `action` field in `--json` accurate. To skip this (faster,
+works without network for the check APIs):
+
+```bash
+grove --no-checks
+```
+
+Or opt out permanently for a repo by creating `.grove.json` at the root:
+
+```json
+{
+  "checks": false
+}
+```
+
+The `--no-checks` flag always overrides the config file.
+
 ## Understanding the tree
 
 The dependency tree is built entirely from **GitHub's `base.ref`** — the target
