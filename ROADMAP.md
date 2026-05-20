@@ -72,6 +72,65 @@ locks from blocking work. Grove silently drops expired claims on each read.
 
 ---
 
+## Planned: API response caching
+
+### Goal
+
+Reduce latency and API usage, especially for `--watch` mode where the same
+data is re-fetched every 30 seconds even when nothing has changed.
+
+### Analysis of current fetch flow
+
+- `fetchPRs` — sequential pagination loop (fine: almost always 1 page), then
+  parallel fallback fetches for closed PRs ✓
+- `fetchChecks` — fully parallel across all branches (`Promise.all`) ✓
+
+The bottleneck is **no caching**: every run makes N × 2 API calls (CI + reviews
+per branch) regardless of whether anything has changed since the last run.
+
+### Design
+
+**Two-layer caching:**
+
+1. **TTL layer (30 s)** — if a cached entry is <30 s old, skip the request
+   entirely and return the cached data. Aligns with the default `--watch`
+   interval: subsequent polls within the same cycle are instant.
+
+2. **ETag layer** — for entries older than the TTL, send `If-None-Match:
+   <etag>` with the request. GitHub returns `304 Not Modified` (no body,
+   faster) when nothing has changed; grove reuses the cached data and resets
+   the TTL. On a `200`, the new data and fresh ETag replace the cache entry.
+
+**Cache location** — `~/.grove-cache.json` (global, persists across sessions
+and repos, keyed by full API URL). Entries older than 1 hour are evicted on
+load to keep the file small.
+
+**Opt-out** — `--no-cache` flag and `cache: false` in `.grove.json` bypass
+both layers entirely (always fresh data, useful for debugging).
+
+### Expected impact
+
+- **First run**: no change (cold cache)
+- **Repeat run within 30 s**: near-instant (all requests skipped)
+- **`--watch` poll (second+)**: mostly `304` responses instead of full
+  payloads — significantly faster, especially for large stacks
+- **Rate limit**: GitHub `304` responses [do not count against the rate
+  limit](https://docs.github.com/en/rest/overview/rate-limits), so
+  ETag caching also reduces API quota usage
+
+### Implementation order
+
+1. `src/cache.ts` — TTL + ETag disk cache, `getCacheEntry`, `setCacheEntry`,
+   `isCacheFresh`, `persistCache`, `setNoCache`
+2. Wrap `ghFetch` in `github.ts` to use the cache (handles both array and
+   object responses)
+3. Wrap inline `fetch` calls in `fetchChecks` with the same cached fetch
+4. Call `persistCache()` at the end of `buildStack` (batch disk writes)
+5. Add `cache: boolean` to `config.ts` and `--no-cache` flag to `index.ts`
+6. Update README with caching behaviour and opt-out docs
+
+---
+
 ## Planned: `Depends-on:` — explicit cross-PR dependencies
 
 ### Goal

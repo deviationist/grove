@@ -47,13 +47,23 @@ function prLink(text, color, url) {
 const sp = n => t(' '.repeat(n), C.dim);
 
 // ── Column layout ─────────────────────────────────────────────────────────────
-// maxLeft = 36  (│   └── PLAT-12-settings-panel-tests)
-// PR col starts at 38  (maxLeft + 2)
-// Badge col starts at 45  (38 + maxPr=5 + 2)
+// maxLeft  = 36  (│   └── PLAT-12-settings-panel-tests)
+// PR col   starts at 38  (maxLeft + 2 min gap)
+// badge col starts at 45  (38 + maxPr=5 + 2)
+// note col starts at 58  (45 + maxBadge=9 + badgePad=2 + noteSep=2)
 //
-// namePad = 38 - leftRawLen
-// prPad   = 2  (all PR numbers here are 5 chars; maxPr - 5 + 2 = 2)
-// noPrPad = 7  (maxPr + 2, fills the PR column for branches without a PR)
+// Badges (normalised to 2-col icon):
+//   ✅ merged  → icon 2 vis + sp + "merged" = 9 vis  (✅ is wide emoji)
+//   ●  open   → icon 1 + pad 1 + sp + "open"  = 7 vis  (JS len = 7)
+//   ◐  draft  → icon 1 + pad 1 + sp + "draft" = 8 vis
+//   ○  local  → icon 1 + pad 1 + sp + "local" = 8 vis
+//
+// badgePad = maxBadge(9) - badgeVis + 2
+//   merged → 2,  open → 4,  draft → 3,  local → 3
+//
+// namePad = maxLeft(36) - leftRawLen + 2
+// prPad   = 2  (all PR numbers here are 5 chars)
+// noPrPad = 7  (maxPr + 2, fills PR column for branches without a PR)
 
 // ── Example lines ─────────────────────────────────────────────────────────────
 const LINES = [
@@ -61,50 +71,51 @@ const LINES = [
   t('grove', C.white, true) + t('  ·  ', C.dim) + t('acme/frontend', C.white, true) + t('  @alice', C.dim),
 
   // Separator
-  t('─'.repeat(54), C.dim),
+  t('─'.repeat(62), C.dim),
 
   // Trunk
   t('main', C.white, true),
 
-  // ├── PLAT-12-auth-service-extract   len=32  pad=6
+  // ├── PLAT-12-auth-service-extract   leftRaw=32  namePad=6  badgePad=2
   t('├── ', C.tree) + t('PLAT-12-auth-service-extract', C.green) +
     sp(6) + prLink('#1021', C.dim, 'https://github.com/acme/frontend/pull/1021') + sp(2) + t('✅ merged', C.green),
 
-  // ├── PLAT-12-auth-token-refresh     len=30  pad=8
+  // ├── PLAT-12-auth-token-refresh     leftRaw=30  namePad=8  badgePad=2
   t('├── ', C.tree) + t('PLAT-12-auth-token-refresh', C.green) +
     sp(8) + prLink('#1022', C.dim, 'https://github.com/acme/frontend/pull/1022') + sp(2) + t('✅ merged', C.green),
 
-  // ├── PLAT-12-user-profile-api       len=28  pad=10
-  t('├── ', C.tree) + t('PLAT-12-user-profile-api', C.gray) +
-    sp(10) + prLink('#1023', C.dim, 'https://github.com/acme/frontend/pull/1023') + sp(2) + t('◐ draft', C.gray) +
-    t('  ← request review', C.white, true),
+  // ├── PLAT-12-user-profile-api       leftRaw=28  namePad=10  badge=●  open(7)  badgePad=4
+  t('├── ', C.tree) + t('PLAT-12-user-profile-api', C.blue) +
+    sp(10) + prLink('#1023', C.dim, 'https://github.com/acme/frontend/pull/1023') + sp(2) + t('●  open', C.blue) +
+    sp(4) + t('✗ CI', C.dot1) + t('  ← fix CI', C.dot1, true),
 
-  // │   └── PLAT-12-user-profile-ui   len=31  pad=7
+  // │   └── PLAT-12-user-profile-ui   leftRaw=31  namePad=7  badge=◐  draft(8)  badgePad=3
   t('│   ', C.tree) + t('└── ', C.tree) + t('PLAT-12-user-profile-ui', C.gray) +
-    sp(7) + prLink('#1024', C.dim, 'https://github.com/acme/frontend/pull/1024') + sp(2) + t('◐ draft', C.gray) +
-    t('  blocked', C.dim),
+    sp(7) + prLink('#1024', C.dim, 'https://github.com/acme/frontend/pull/1024') + sp(2) + t('◐  draft', C.gray) +
+    sp(3) + t('blocked', C.dim) + t('  ✗ CI', C.dot1),
 
-  // ├── PLAT-12-settings-panel ◀       len=28  pad=10
-  t('├── ', C.tree) + t('PLAT-12-settings-panel', C.gray, true) + t(' ◀', C.dim) +
-    sp(10) + prLink('#1031', C.dim, 'https://github.com/acme/frontend/pull/1031') + sp(2) + t('◐ draft', C.gray) +
-    t('  ← request review', C.white, true),
+  // ├── PLAT-12-settings-panel ◀       leftRaw=28  namePad=10  badge=●  open(7)  badgePad=4
+  t('├── ', C.tree) + t('PLAT-12-settings-panel', C.blue, true) + t(' ◀', C.dim) +
+    sp(10) + prLink('#1031', C.dim, 'https://github.com/acme/frontend/pull/1031') + sp(2) + t('●  open', C.blue) +
+    sp(4) + t('↩ review', C.yellow) + t('  ← address review', C.yellow, true),
 
-  // │   └── PLAT-12-settings-panel-tests  len=36  pad=2
+  // │   └── PLAT-12-settings-panel-tests  leftRaw=36  namePad=2  badge=◐  draft(8)  badgePad=3
   t('│   ', C.tree) + t('└── ', C.tree) + t('PLAT-12-settings-panel-tests', C.gray) +
-    sp(2) + prLink('#1032', C.dim, 'https://github.com/acme/frontend/pull/1032') + sp(2) + t('◐ draft', C.gray) +
-    t('  blocked', C.dim) + t('  ⚠ needs rebase', C.yellow),
+    sp(2) + prLink('#1032', C.dim, 'https://github.com/acme/frontend/pull/1032') + sp(2) + t('◐  draft', C.gray) +
+    sp(3) + t('blocked', C.dim),
 
-  // └── chore/update-deps              len=21  pad=17+7=24 (no PR)
+  // └── chore/update-deps   leftRaw=21  namePad=17  noPrPad=7  badge=○  local(8)  badgePad=3
   t('└── ', C.tree) + t('chore/update-deps', C.dim) +
-    sp(24) + t('○ local', C.dim) +
-    t('  ← open PR', C.white, true) + t('  ⚠ needs rebase', C.yellow),
+    sp(17) + sp(7) + t('○  local', C.dim) +
+    sp(3) + t('← open PR', C.white, true),
 
   // Separator
-  t('─'.repeat(54), C.dim),
+  t('─'.repeat(62), C.dim),
 
   // Summary
-  t('2 ready for review', C.white, true) + t('  ·  ', C.dim) +
-  t('2 needs rebase', C.yellow)          + t('  ·  ', C.dim) +
+  t('1 CI failing', C.dot1)             + t('  ·  ', C.dim) +
+  t('1 needs changes', C.yellow)         + t('  ·  ', C.dim) +
+  t('1 ready for review', C.white, true) + t('  ·  ', C.dim) +
   t('2 blocked', C.dim)                  + t('  ·  ', C.dim) +
   t('2 merged', C.green),
 ];
