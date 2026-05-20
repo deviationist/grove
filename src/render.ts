@@ -209,7 +209,7 @@ function renderDefault(
         : ' '.repeat(maxPr + 2);
       // Badge padding uses visual width, not string length, to handle wide emoji
       const badgePad = ' '.repeat(maxBadge - l.badgeVisualWidth + 2);
-      const noteSep  = l.noteRaw ? ' ' : '';
+      const noteSep  = '';
       return `${l.leftColored}${namePad}${prCol}${l.badge}${badgePad}${noteSep}${l.note}`;
     });
 
