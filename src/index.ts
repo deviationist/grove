@@ -11,6 +11,7 @@ import {
 import { fetchPRs, fetchCurrentUser } from './github';
 import { buildTree, TreeNode } from './tree';
 import { render } from './render';
+import { buildJsonOutput } from './json';
 import { startSpinner } from './spinner';
 
 const HELP = `
@@ -23,6 +24,7 @@ OPTIONS
   --all             Show PRs from all authors (default: yours only)
   --author <login>  Show PRs from a specific GitHub user
   --open            Open the first ready-for-review PR in your browser
+  --json            Output machine-readable JSON (LLM-friendly)
   --help            Show this help message
 
 FILTERING
@@ -34,6 +36,7 @@ EXAMPLES
   grove --author alice       Alice's PRs only
   grove PLAT-12              Filter by keyword
   grove --open               Open the first PR ready for review
+  grove --json               Machine-readable output for scripting/LLMs
 `.trim();
 
 function parseArgs(argv: string[]): {
@@ -41,12 +44,14 @@ function parseArgs(argv: string[]): {
   allAuthors: boolean;
   authorArg?: string;
   openReady: boolean;
+  jsonOutput: boolean;
   showHelp: boolean;
 } {
   let filter: string | undefined;
   let allAuthors = false;
   let authorArg: string | undefined;
   let openReady = false;
+  let jsonOutput = false;
   let showHelp = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -56,6 +61,8 @@ function parseArgs(argv: string[]): {
       allAuthors = true;
     } else if (argv[i] === '--open') {
       openReady = true;
+    } else if (argv[i] === '--json') {
+      jsonOutput = true;
     } else if (argv[i] === '--author' && argv[i + 1]) {
       authorArg = argv[++i];
     } else if (!argv[i].startsWith('--')) {
@@ -63,7 +70,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { filter, allAuthors, authorArg, openReady, showHelp };
+  return { filter, allAuthors, authorArg, openReady, jsonOutput, showHelp };
 }
 
 /** DFS to find the URL of the first PR that is ready for review. */
@@ -98,7 +105,7 @@ function openUrl(url: string): void {
 
 async function main() {
   try {
-    const { filter, allAuthors, authorArg, openReady, showHelp } = parseArgs(process.argv.slice(2));
+    const { filter, allAuthors, authorArg, openReady, jsonOutput, showHelp } = parseArgs(process.argv.slice(2));
 
     if (showHelp) {
       console.log(HELP);
@@ -183,6 +190,12 @@ async function main() {
       } else {
         process.stdout.write('No PR is ready for review right now.\n');
       }
+      return;
+    }
+
+    if (jsonOutput) {
+      const out = buildJsonOutput(roots, nodeMap, trunk, `${owner}/${repo}`);
+      process.stdout.write(JSON.stringify(out, null, 2) + '\n');
       return;
     }
 
