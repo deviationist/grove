@@ -8,10 +8,11 @@ import {
   getCurrentBranch,
   Branch,
 } from './git';
-import { fetchPRs, fetchCurrentUser } from './github';
+import { fetchPRs, fetchCurrentUser, fetchChecks } from './github';
 import { buildTree, TreeNode } from './tree';
 import { render } from './render';
 import { buildJsonOutput } from './json';
+import { loadConfig } from './config';
 import { startSpinner } from './spinner';
 
 const HELP = `
@@ -27,6 +28,7 @@ OPTIONS
   --json              Output machine-readable JSON (LLM-friendly)
   --watch             Re-poll on an interval and emit on state changes
   --interval <secs>   Polling interval for --watch (default: 30)
+  --no-checks         Skip CI and review state fetching (faster, offline-friendly)
   --help              Show this help message
 
 FILTERING
@@ -52,6 +54,7 @@ function parseArgs(argv: string[]): {
   jsonOutput: boolean;
   watch: boolean;
   interval: number;
+  noChecks: boolean;
   showHelp: boolean;
 } {
   let filter: string | undefined;
@@ -61,6 +64,7 @@ function parseArgs(argv: string[]): {
   let jsonOutput = false;
   let watch = false;
   let interval = 30;
+  let noChecks = false;
   let showHelp = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -74,6 +78,8 @@ function parseArgs(argv: string[]): {
       jsonOutput = true;
     } else if (argv[i] === '--watch') {
       watch = true;
+    } else if (argv[i] === '--no-checks') {
+      noChecks = true;
     } else if (argv[i] === '--interval' && argv[i + 1]) {
       const n = parseInt(argv[++i], 10);
       if (!isNaN(n) && n > 0) interval = n;
@@ -84,7 +90,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, showHelp };
+  return { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, showHelp };
 }
 
 interface StackConfig {
@@ -95,6 +101,7 @@ interface StackConfig {
   allAuthors: boolean;
   authorArg?: string;
   filter?: string;
+  checksEnabled: boolean;
 }
 
 interface StackResult {
@@ -154,6 +161,24 @@ async function buildStack(config: StackConfig): Promise<StackResult> {
 
   const filteredBranches = [...filteredLocal, ...filteredRemote];
   const { roots, nodeMap } = await buildTree(filteredBranches, trunk, prMap);
+
+  if (checksEnabled) {
+    const checkNodes = [...nodeMap.values()]
+      .filter(n => n.status !== 'merged' && !n.remote)
+      .map(n => ({ branch: n.branch, prNumber: n.pr?.number ?? null }));
+
+    if (checkNodes.length > 0) {
+      const checksMap = await fetchChecks(owner, repo, checkNodes);
+      for (const [branch, result] of checksMap) {
+        const node = nodeMap.get(branch);
+        if (node) {
+          node.ciStatus = result.ci;
+          node.reviewStatus = result.reviews;
+        }
+      }
+    }
+  }
+
   return { roots, nodeMap, authorFilter };
 }
 
@@ -190,7 +215,7 @@ function openUrl(url: string): void {
 async function runWatch(
   config: Omit<StackConfig, 'branches'>,
   jsonOutput: boolean,
-  interval: number
+  interval: number,
 ): Promise<void> {
   const { owner, repo, trunk } = config;
   let prevSerialized: string | null = null;
@@ -239,7 +264,7 @@ async function runWatch(
 
 async function main() {
   try {
-    const { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, showHelp } =
+    const { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, showHelp } =
       parseArgs(process.argv.slice(2));
 
     if (showHelp) {
@@ -247,7 +272,9 @@ async function main() {
       process.exit(0);
     }
 
-    getRepoRoot(); // throws if not inside a git repo
+    const repoRoot = getRepoRoot();
+    const config = loadConfig(repoRoot);
+    const checksEnabled = config.checks && !noChecks;
 
     const remoteUrl = getRemoteUrl();
     const { owner, repo } = parseOwnerRepo(remoteUrl);
@@ -255,7 +282,7 @@ async function main() {
 
     if (watch) {
       process.once('SIGINT', () => { process.stdout.write('\n'); process.exit(130); });
-      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter }, jsonOutput, interval);
+      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, jsonOutput, interval);
       return;
     }
 
@@ -266,7 +293,7 @@ async function main() {
     process.once('SIGINT', () => { spinner.stop(); process.exit(130); });
 
     const { roots, nodeMap, authorFilter } = await buildStack({
-      owner, repo, trunk, branches, allAuthors, authorArg, filter,
+      owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled,
     });
 
     spinner.stop();

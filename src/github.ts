@@ -1,5 +1,13 @@
 import { execFileSync, execFile } from 'child_process';
 
+export type CIStatus = 'passing' | 'failing' | 'pending';
+export type ReviewStatus = 'approved' | 'changes_requested' | 'pending';
+
+export interface ChecksResult {
+  ci: CIStatus;
+  reviews: ReviewStatus | null;
+}
+
 export interface PRInfo {
   number: number;
   title: string;
@@ -91,4 +99,68 @@ export async function fetchPRs(
   );
 
   return map;
+}
+
+function ciStatusFromRuns(runs: any[]): CIStatus {
+  if (runs.length === 0) return 'pending';
+  const badConclusions = new Set(['failure', 'cancelled', 'timed_out', 'action_required']);
+  if (runs.some(r => r.status === 'completed' && badConclusions.has(r.conclusion))) return 'failing';
+  if (runs.every(r => r.status === 'completed')) return 'passing';
+  return 'pending';
+}
+
+function reviewStatusFromReviews(reviews: any[]): ReviewStatus {
+  // Latest non-comment, non-dismissed review per reviewer
+  const latest = new Map<string, string>();
+  for (const r of reviews) {
+    if (r.state !== 'COMMENTED' && r.state !== 'DISMISSED') {
+      latest.set(r.user?.login ?? r.id, r.state);
+    }
+  }
+  const states = [...latest.values()];
+  if (states.includes('CHANGES_REQUESTED')) return 'changes_requested';
+  if (states.length > 0 && states.every(s => s === 'APPROVED')) return 'approved';
+  return 'pending';
+}
+
+export async function fetchChecks(
+  owner: string,
+  repo: string,
+  nodes: Array<{ branch: string; prNumber: number | null }>
+): Promise<Map<string, ChecksResult>> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'grove-cli/0.1',
+  };
+
+  const results = new Map<string, ChecksResult>();
+
+  await Promise.all(
+    nodes.map(async ({ branch, prNumber }) => {
+      const [ciSettled, reviewSettled] = await Promise.allSettled([
+        fetch(
+          `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}/check-runs?per_page=100`,
+          { headers }
+        ).then(r => (r.ok ? r.json() : null)),
+        prNumber != null
+          ? fetch(
+              `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/reviews?per_page=100`,
+              { headers }
+            ).then(r => (r.ok ? r.json() : null))
+          : Promise.resolve(null),
+      ]);
+
+      const ciData = ciSettled.status === 'fulfilled' ? ciSettled.value : null;
+      const reviewData = reviewSettled.status === 'fulfilled' ? reviewSettled.value : null;
+
+      results.set(branch, {
+        ci: ciData ? ciStatusFromRuns(ciData.check_runs ?? []) : 'pending',
+        reviews: reviewData ? reviewStatusFromReviews(reviewData) : null,
+      });
+    })
+  );
+
+  return results;
 }
