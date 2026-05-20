@@ -174,6 +174,28 @@ grove --json | jq '.prioritized[0]'   # top action
 
 See [AGENTS.md](./AGENTS.md) for how to use this output as LLM context.
 
+### rtk integration
+
+Grove is natively compatible with [rtk](https://github.com/rtk-ai/rtk), the
+token-optimizing CLI proxy.
+
+When grove detects it is running as a child of `rtk`, it **automatically
+switches to minified JSON output** — no flags needed:
+
+```bash
+rtk grove          # minified JSON, auto-detected
+grove --json       # same output, explicit
+grove --json --pretty   # indented JSON for human reading
+```
+
+Detection uses the parent process ID (`process.ppid`) — `/proc` on Linux,
+`ps` on macOS — with a fallback to the `RTK` environment variable. Explicit
+visual flags (`--table`, `--watch`) always override auto-detection.
+
+The result: `rtk grove` gives rtk a single compact JSON line it can parse,
+summarise, or pass straight through — no ANSI codes, no box-drawing, just
+structured data.
+
 ### Skipping CI and review checks
 
 By default grove fetches CI state and review status for each open branch,
