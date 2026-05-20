@@ -17,6 +17,20 @@ grove --json > /tmp/grove-context.json
 # then reference it in your prompt
 ```
 
+### Using grove with rtk
+
+Grove has native [rtk](https://github.com/rtk-ai/rtk) support. When invoked
+as `rtk grove`, grove auto-detects the parent process and switches to minified
+JSON output automatically — no `--json` flag required:
+
+```bash
+rtk grove                        # auto JSON, token-optimized
+rtk grove --json --pretty        # indented, for readability
+```
+
+`--json` output is minified by default (no whitespace) for maximum token
+efficiency. Pipe to `jq` if you want pretty-printing outside of rtk.
+
 ## JSON schema
 
 ```jsonc
