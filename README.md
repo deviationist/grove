@@ -6,7 +6,7 @@ for review next.
 
 GitHub's PR list is flat. Branch names don't tell you the order. Grove fixes that.
 
-![grove output](./docs/screenshot-v0.1.2-70d9a9.svg)
+![grove output](./docs/screenshot-v0.1.2-f8e922.svg)
 
 ## How it works
 
