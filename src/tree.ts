@@ -1,5 +1,5 @@
 import { Branch, findParent, getMergeBaseAsync } from './git';
-import { PRInfo } from './github';
+import { PRInfo, CIStatus, ReviewStatus } from './github';
 
 export type BranchStatus = 'merged' | 'open' | 'draft' | 'no-pr';
 
@@ -11,6 +11,8 @@ export interface TreeNode {
   children: TreeNode[];
   status: BranchStatus;
   remote: boolean;
+  ciStatus: CIStatus | null;
+  reviewStatus: ReviewStatus | null;
 }
 
 export interface TreeResult {
@@ -50,6 +52,8 @@ export async function buildTree(
       children: [],
       status: statusFromPR(pr),
       remote: !!branch.remote,
+      ciStatus: null,
+      reviewStatus: null,
     });
   }
 
