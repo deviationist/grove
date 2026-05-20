@@ -6,6 +6,8 @@ interface Stats {
   blocked: number;
   merged: number;
   rebase: number;
+  fixCi: number;
+  addressReview: number;
 }
 
 interface NodeLine {
@@ -50,20 +52,44 @@ function ancestorsAllMerged(node: TreeNode, nodeMap: Map<string, TreeNode>): boo
   return true;
 }
 
+function ciTag(node: TreeNode): string {
+  if (node.ciStatus === 'failing') return chalk.red('  ✗ CI');
+  if (node.ciStatus === 'passing') return chalk.dim.green('  ✓ CI');
+  return '';
+}
+
+function reviewTag(node: TreeNode): string {
+  if (node.reviewStatus === 'changes_requested') return chalk.yellow('  ↩ review');
+  if (node.reviewStatus === 'approved')          return chalk.dim.green('  ✓ approved');
+  return '';
+}
+
 function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats): string {
   if (node.status === 'merged') {
     stats.merged++;
     return '';
   }
+
   const rebase = node.needsRebase ? chalk.yellow('  ⚠ needs rebase') : '';
   if (node.needsRebase) stats.rebase++;
+
   if (ancestorsAllMerged(node, nodeMap)) {
+    if (node.ciStatus === 'failing') {
+      stats.fixCi++;
+      return chalk.red('  ✗ CI') + reviewTag(node) + chalk.bold.red('  ← fix CI') + rebase;
+    }
+    if (node.reviewStatus === 'changes_requested') {
+      stats.addressReview++;
+      return chalk.yellow('  ↩ review') + chalk.bold.yellow('  ← address review') + rebase;
+    }
     stats.ready++;
     const label = node.status === 'no-pr' ? '← open PR' : '← request review';
-    return chalk.bold.white(`  ${label}`) + rebase;
+    const approved = node.reviewStatus === 'approved' ? chalk.dim.green('  ✓ approved') : '';
+    return approved + chalk.bold.white(`  ${label}`) + rebase;
   }
+
   stats.blocked++;
-  return chalk.dim('  blocked') + rebase;
+  return chalk.dim('  blocked') + ciTag(node) + reviewTag(node) + rebase;
 }
 
 function collectLines(
@@ -127,7 +153,7 @@ export function render(
   console.log(sep);
   console.log(chalk.bold(trunk));
 
-  const stats: Stats = { ready: 0, blocked: 0, merged: 0, rebase: 0 };
+  const stats: Stats = { ready: 0, blocked: 0, merged: 0, rebase: 0, fixCi: 0, addressReview: 0 };
 
   if (roots.length === 0) {
     console.log(chalk.dim('  (no local branches)'));
@@ -152,9 +178,11 @@ export function render(
   console.log(sep);
 
   const parts: string[] = [];
-  if (stats.ready  > 0) parts.push(chalk.bold.white(`${stats.ready} ready for review`));
-  if (stats.rebase > 0) parts.push(chalk.yellow(`${stats.rebase} needs rebase`));
-  if (stats.blocked > 0) parts.push(chalk.dim(`${stats.blocked} blocked`));
-  if (stats.merged > 0) parts.push(chalk.green(`${stats.merged} merged`));
+  if (stats.fixCi        > 0) parts.push(chalk.red(`${stats.fixCi} CI failing`));
+  if (stats.addressReview > 0) parts.push(chalk.yellow(`${stats.addressReview} needs changes`));
+  if (stats.ready        > 0) parts.push(chalk.bold.white(`${stats.ready} ready for review`));
+  if (stats.rebase       > 0) parts.push(chalk.yellow(`${stats.rebase} needs rebase`));
+  if (stats.blocked      > 0) parts.push(chalk.dim(`${stats.blocked} blocked`));
+  if (stats.merged       > 0) parts.push(chalk.green(`${stats.merged} merged`));
   if (parts.length > 0) console.log(parts.join(chalk.dim('  ·  ')));
 }
