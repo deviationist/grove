@@ -24,11 +24,19 @@ function git(...args: string[]): string {
 }
 
 export function getRepoRoot(): string {
-  return git('rev-parse', '--show-toplevel');
+  try {
+    return git('rev-parse', '--show-toplevel');
+  } catch {
+    throw new Error('not a git repository. Run grove from inside a git repo.');
+  }
 }
 
 export function getRemoteUrl(): string {
-  return git('remote', 'get-url', 'origin');
+  try {
+    return git('remote', 'get-url', 'origin');
+  } catch {
+    throw new Error('no remote named "origin". Add a GitHub remote with: git remote add origin <url>');
+  }
 }
 
 export function parseOwnerRepo(remoteUrl: string): { owner: string; repo: string } {
@@ -36,7 +44,7 @@ export function parseOwnerRepo(remoteUrl: string): { owner: string; repo: string
   if (ssh) return { owner: ssh[1], repo: ssh[2] };
   const https = remoteUrl.match(/https:\/\/github\.com\/([^/]+)\/(.+?)(?:\.git)?$/);
   if (https) return { owner: https[1], repo: https[2] };
-  throw new Error(`Cannot parse GitHub owner/repo from remote URL: ${remoteUrl}`);
+  throw new Error(`origin does not point to GitHub (got: ${remoteUrl}). Grove requires a GitHub remote.`);
 }
 
 export function getTrunk(): string {
