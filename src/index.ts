@@ -111,7 +111,7 @@ interface StackResult {
 }
 
 async function buildStack(config: StackConfig): Promise<StackResult> {
-  const { owner, repo, trunk, branches, allAuthors, authorArg, filter } = config;
+  const { owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled } = config;
 
   const branchNames = branches.map(b => b.name).filter(n => n !== trunk);
   const [prMap, currentUser] = await Promise.all([
