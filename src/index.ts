@@ -25,7 +25,8 @@ OPTIONS
   --all               Show PRs from all authors (default: yours only)
   --author <login>    Show PRs from a specific GitHub user
   --open              Open the first ready-for-review PR in your browser
-  --json              Output machine-readable JSON (LLM-friendly)
+  --json              Output machine-readable JSON (minified, LLM-friendly)
+  --pretty            Pretty-print JSON output (use with --json)
   --watch             Re-poll on an interval and emit on state changes
   --interval <secs>   Polling interval for --watch (default: 30)
   --no-checks         Skip CI and review state fetching (faster, offline-friendly)
@@ -53,6 +54,7 @@ function parseArgs(argv: string[]): {
   authorArg?: string;
   openReady: boolean;
   jsonOutput: boolean;
+  prettyJson: boolean;
   watch: boolean;
   interval: number;
   noChecks: boolean;
@@ -64,6 +66,7 @@ function parseArgs(argv: string[]): {
   let authorArg: string | undefined;
   let openReady = false;
   let jsonOutput = false;
+  let prettyJson = false;
   let watch = false;
   let interval = 30;
   let noChecks = false;
@@ -79,6 +82,8 @@ function parseArgs(argv: string[]): {
       openReady = true;
     } else if (argv[i] === '--json') {
       jsonOutput = true;
+    } else if (argv[i] === '--pretty') {
+      prettyJson = true;
     } else if (argv[i] === '--watch') {
       watch = true;
     } else if (argv[i] === '--no-checks') {
@@ -95,7 +100,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, tableFormat, showHelp };
+  return { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, showHelp };
 }
 
 interface StackConfig {
@@ -270,7 +275,7 @@ async function runWatch(
 
 async function main() {
   try {
-    const { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, tableFormat, showHelp } =
+    const { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, showHelp } =
       parseArgs(process.argv.slice(2));
 
     if (showHelp) {
@@ -318,7 +323,7 @@ async function main() {
 
     if (jsonOutput) {
       const out = buildJsonOutput(roots, nodeMap, trunk, `${owner}/${repo}`);
-      process.stdout.write(JSON.stringify(out) + '\n');
+      process.stdout.write(JSON.stringify(out, null, prettyJson ? 2 : 0) + '\n');
       return;
     }
 
