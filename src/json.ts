@@ -3,6 +3,8 @@ import { TreeNode } from './tree';
 export type Action =
   | 'merged'
   | 'needs_rebase'
+  | 'fix_ci'
+  | 'address_review'
   | 'request_review'
   | 'create_pr'
   | 'blocked';
@@ -15,9 +17,7 @@ export interface JsonBranch {
   prUrl: string | null;
   status: string;
   needsRebase: boolean;
-  /** CI state — null until grove gains CI integration */
   ci: 'passing' | 'failing' | 'pending' | null;
-  /** Review state — null until grove gains review integration */
   reviews: 'approved' | 'changes_requested' | 'pending' | null;
   action: Action;
   /** Branch names in the stack that must merge before this one can */
@@ -42,10 +42,12 @@ export interface JsonOutput {
 
 const ACTION_PRIORITY: Record<Action, number> = {
   needs_rebase: 0,
-  request_review: 1,
-  create_pr: 2,
-  blocked: 3,
-  merged: 4,
+  fix_ci: 1,
+  address_review: 2,
+  request_review: 3,
+  create_pr: 4,
+  blocked: 5,
+  merged: 6,
 };
 
 function unmergedAncestors(node: TreeNode, nodeMap: Map<string, TreeNode>): string[] {
@@ -63,6 +65,8 @@ function computeAction(node: TreeNode, blockedBy: string[]): Action {
   if (node.needsRebase) return 'needs_rebase';
   if (blockedBy.length > 0) return 'blocked';
   if (!node.pr) return 'create_pr';
+  if (node.ciStatus === 'failing') return 'fix_ci';
+  if (node.reviewStatus === 'changes_requested') return 'address_review';
   return 'request_review';
 }
 
@@ -93,8 +97,8 @@ export function buildJsonOutput(
       prUrl: node.pr?.url ?? null,
       status: node.status,
       needsRebase: node.needsRebase,
-      ci: null,
-      reviews: null,
+      ci: node.ciStatus,
+      reviews: node.reviewStatus,
       action,
       blockedBy,
     };
@@ -107,6 +111,8 @@ export function buildJsonOutput(
     merged: branches.filter(b => b.action === 'merged').length,
     readyForReview: branches.filter(b => b.action === 'request_review').length,
     needsRebase: branches.filter(b => b.action === 'needs_rebase').length,
+    fixCi: branches.filter(b => b.action === 'fix_ci').length,
+    addressReview: branches.filter(b => b.action === 'address_review').length,
     blocked: branches.filter(b => b.action === 'blocked').length,
     noPr: branches.filter(b => b.action === 'create_pr').length,
   };
