@@ -183,8 +183,8 @@ When grove detects it is running as a child of `rtk`, it **automatically
 switches to minified JSON output** — no flags needed:
 
 ```bash
-rtk grove          # minified JSON, auto-detected
-grove --json       # same output, explicit
+rtk grove               # minified JSON, auto-detected
+grove --json            # same output, explicit
 grove --json --pretty   # indented JSON for human reading
 ```
 
