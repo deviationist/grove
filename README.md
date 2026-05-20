@@ -65,7 +65,7 @@ npm install -g .
 ## Usage
 
 ```
-grove [filter] [--all] [--author <login>] [--open] [--json]
+grove [filter] [--all] [--author <login>] [--open] [--json] [--table] [--watch] [--no-checks]
 ```
 
 ### Default — your PRs only
@@ -154,7 +154,9 @@ position, rebase state, PR presence) into a single directive:
 | Action | Meaning |
 |--------|---------|
 | `needs_rebase` | Parent has moved — rebase before anything else |
-| `request_review` | All ancestors merged, PR is open — send for review |
+| `fix_ci` | CI is failing — fix it before requesting review |
+| `address_review` | A reviewer has requested changes |
+| `request_review` | All ancestors merged, CI passing — send for review |
 | `create_pr` | All ancestors merged, no PR yet — open one |
 | `blocked` | Has at least one unmerged ancestor |
 | `merged` | Already merged |
@@ -191,6 +193,27 @@ Or opt out permanently for a repo by creating `.grove.json` at the root:
 ```
 
 The `--no-checks` flag always overrides the config file.
+
+### Bordered table output
+
+```bash
+grove --table
+```
+
+Switches from the default tree view to a box-bordered table with column
+headers (`BRANCH / PR / STATUS / ACTION`). Useful if you prefer a more
+structured layout or are copying output into a document.
+
+Set it permanently for a repo via `.grove.json`:
+
+```json
+{
+  "format": "table"
+}
+```
+
+`--table` always overrides the config file. Both formats support all other
+flags (`--all`, `--author`, `--watch`, `--no-checks`, etc.).
 
 ## Understanding the tree
 
