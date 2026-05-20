@@ -10,7 +10,7 @@ import {
 } from './git';
 import { fetchPRs, fetchCurrentUser, fetchChecks } from './github';
 import { buildTree, TreeNode } from './tree';
-import { render } from './render';
+import { render, RenderFormat } from './render';
 import { buildJsonOutput } from './json';
 import { loadConfig } from './config';
 import { startSpinner } from './spinner';
@@ -29,6 +29,7 @@ OPTIONS
   --watch             Re-poll on an interval and emit on state changes
   --interval <secs>   Polling interval for --watch (default: 30)
   --no-checks         Skip CI and review state fetching (faster, offline-friendly)
+  --table             Bordered table output instead of tree
   --help              Show this help message
 
 FILTERING
@@ -55,6 +56,7 @@ function parseArgs(argv: string[]): {
   watch: boolean;
   interval: number;
   noChecks: boolean;
+  tableFormat: boolean;
   showHelp: boolean;
 } {
   let filter: string | undefined;
@@ -65,6 +67,7 @@ function parseArgs(argv: string[]): {
   let watch = false;
   let interval = 30;
   let noChecks = false;
+  let tableFormat = false;
   let showHelp = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -80,6 +83,8 @@ function parseArgs(argv: string[]): {
       watch = true;
     } else if (argv[i] === '--no-checks') {
       noChecks = true;
+    } else if (argv[i] === '--table') {
+      tableFormat = true;
     } else if (argv[i] === '--interval' && argv[i + 1]) {
       const n = parseInt(argv[++i], 10);
       if (!isNaN(n) && n > 0) interval = n;
@@ -90,7 +95,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, showHelp };
+  return { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, tableFormat, showHelp };
 }
 
 interface StackConfig {
@@ -216,6 +221,7 @@ async function runWatch(
   config: Omit<StackConfig, 'branches'>,
   jsonOutput: boolean,
   interval: number,
+  format: RenderFormat,
 ): Promise<void> {
   const { owner, repo, trunk } = config;
   let prevSerialized: string | null = null;
@@ -242,7 +248,7 @@ async function runWatch(
 
         if (changed || firstRun) {
           process.stdout.write('\x1B[2J\x1B[H'); // clear screen
-          render(roots, trunk, `${owner}/${repo}`, nodeMap, currentBranch, config.filter, authorFilter);
+          render(roots, trunk, `${owner}/${repo}`, nodeMap, currentBranch, config.filter, authorFilter, format);
           const ts = new Date().toLocaleTimeString();
           process.stdout.write(`\nWatching · updated ${ts} · every ${interval}s  Ctrl+C to stop\n`);
           prevSerialized = serialized;
@@ -264,7 +270,7 @@ async function runWatch(
 
 async function main() {
   try {
-    const { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, showHelp } =
+    const { filter, allAuthors, authorArg, openReady, jsonOutput, watch, interval, noChecks, tableFormat, showHelp } =
       parseArgs(process.argv.slice(2));
 
     if (showHelp) {
@@ -275,6 +281,7 @@ async function main() {
     const repoRoot = getRepoRoot();
     const config = loadConfig(repoRoot);
     const checksEnabled = config.checks && !noChecks;
+    const format: RenderFormat = tableFormat ? 'table' : config.format;
 
     const remoteUrl = getRemoteUrl();
     const { owner, repo } = parseOwnerRepo(remoteUrl);
@@ -282,7 +289,7 @@ async function main() {
 
     if (watch) {
       process.once('SIGINT', () => { process.stdout.write('\n'); process.exit(130); });
-      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, jsonOutput, interval);
+      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, jsonOutput, interval, format);
       return;
     }
 
@@ -315,7 +322,7 @@ async function main() {
       return;
     }
 
-    render(roots, trunk, `${owner}/${repo}`, nodeMap, currentBranch, filter, authorFilter);
+    render(roots, trunk, `${owner}/${repo}`, nodeMap, currentBranch, filter, authorFilter, format);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`grove: ${msg}\n`);
