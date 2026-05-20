@@ -57,24 +57,29 @@ function ancestorsAllMerged(node: TreeNode, nodeMap: Map<string, TreeNode>): boo
   return true;
 }
 
-// Returns [rawText, coloredText]
+function join(parts: string[], sep = '  '): string {
+  return parts.filter(Boolean).join(sep);
+}
+
+// Returns [rawText, coloredText] — no leading whitespace so both tree and
+// table modes can apply their own spacing.
 function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats): [string, string] {
   if (node.status === 'merged') {
     stats.merged++;
     return ['', ''];
   }
 
-  const rebaseRaw = node.needsRebase ? '  ⚠ needs rebase' : '';
+  const rebaseRaw = node.needsRebase ? '⚠ needs rebase' : '';
   const rebase    = node.needsRebase ? chalk.yellow(rebaseRaw) : '';
   if (node.needsRebase) stats.rebase++;
 
-  const ciRaw = node.ciStatus === 'failing' ? '  ✗ CI'
-    : node.ciStatus === 'passing' ? '  ✓ CI' : '';
+  const ciRaw = node.ciStatus === 'failing' ? '✗ CI'
+    : node.ciStatus === 'passing' ? '✓ CI' : '';
   const ci = node.ciStatus === 'failing' ? chalk.red(ciRaw)
     : node.ciStatus === 'passing' ? chalk.dim.green(ciRaw) : '';
 
-  const rvRaw = node.reviewStatus === 'changes_requested' ? '  ↩ review'
-    : node.reviewStatus === 'approved' ? '  ✓ approved' : '';
+  const rvRaw = node.reviewStatus === 'changes_requested' ? '↩ review'
+    : node.reviewStatus === 'approved' ? '✓ approved' : '';
   const rv = node.reviewStatus === 'changes_requested' ? chalk.yellow(rvRaw)
     : node.reviewStatus === 'approved' ? chalk.dim.green(rvRaw) : '';
 
@@ -82,29 +87,29 @@ function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats):
     if (node.ciStatus === 'failing') {
       stats.fixCi++;
       return [
-        ciRaw + rvRaw + '  ← fix CI' + rebaseRaw,
-        ci + rv + chalk.bold.red('  ← fix CI') + rebase,
+        join([ciRaw, rvRaw, '← fix CI', rebaseRaw]),
+        join([ci, rv, chalk.bold.red('← fix CI'), rebase]),
       ];
     }
     if (node.reviewStatus === 'changes_requested') {
       stats.addressReview++;
       return [
-        rvRaw + '  ← address review' + rebaseRaw,
-        rv + chalk.bold.yellow('  ← address review') + rebase,
+        join([rvRaw, '← address review', rebaseRaw]),
+        join([rv, chalk.bold.yellow('← address review'), rebase]),
       ];
     }
     stats.ready++;
     const label = node.status === 'no-pr' ? '← open PR' : '← request review';
     return [
-      rvRaw + `  ${label}` + rebaseRaw,
-      rv + chalk.bold.white(`  ${label}`) + rebase,
+      join([rvRaw, label, rebaseRaw]),
+      join([rv, chalk.bold.white(label), rebase]),
     ];
   }
 
   stats.blocked++;
   return [
-    '  blocked' + ciRaw + rvRaw + rebaseRaw,
-    chalk.dim('  blocked') + ci + rv + rebase,
+    join(['blocked', ciRaw, rvRaw, rebaseRaw]),
+    join([chalk.dim('blocked'), ci, rv, rebase]),
   ];
 }
 
@@ -204,7 +209,8 @@ function renderDefault(
         : ' '.repeat(maxPr + 2);
       // Badge padding uses visual width, not string length, to handle wide emoji
       const badgePad = ' '.repeat(maxBadge - l.badgeVisualWidth + 2);
-      return `${l.leftColored}${namePad}${prCol}${l.badge}${badgePad}${l.note}`;
+      const noteSep  = l.noteRaw ? '  ' : '';
+      return `${l.leftColored}${namePad}${prCol}${l.badge}${badgePad}${noteSep}${l.note}`;
     });
 
     console.log(rendered.join('\n'));
