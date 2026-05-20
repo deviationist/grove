@@ -108,6 +108,30 @@ Shows branches whose PRs were opened by `bob`.
 grove --author bob PLAT-12
 ```
 
+### Live watch mode
+
+```bash
+grove --watch
+```
+
+Re-polls GitHub every 30 seconds and re-renders the tree whenever state
+changes. Useful to keep in a side terminal while you work.
+
+Change the polling interval:
+
+```bash
+grove --watch --interval 10
+```
+
+Combine with `--json` for a live NDJSON stream (one JSON object per line,
+emitted whenever the stack state changes) — the format agent processes can
+`readline` and react to:
+
+```bash
+grove --watch --json
+grove --watch --json --interval 10
+```
+
 ### Open the next ready PR in your browser
 
 ```bash
