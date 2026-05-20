@@ -65,7 +65,7 @@ npm install -g .
 ## Usage
 
 ```
-grove [filter] [--all] [--author <login>]
+grove [filter] [--all] [--author <login>] [--open] [--json]
 ```
 
 ### Default — your PRs only
@@ -107,6 +107,46 @@ Shows branches whose PRs were opened by `bob`.
 ```bash
 grove --author bob PLAT-12
 ```
+
+### Open the next ready PR in your browser
+
+```bash
+grove --open
+```
+
+Opens the first PR that is ready for review (all ancestors merged) directly
+in your browser.
+
+### Machine-readable JSON output
+
+```bash
+grove --json
+```
+
+Outputs a structured JSON snapshot instead of the terminal visualisation.
+Each branch includes an `action` field that collapses all signals (stack
+position, rebase state, PR presence) into a single directive:
+
+| Action | Meaning |
+|--------|---------|
+| `needs_rebase` | Parent has moved — rebase before anything else |
+| `request_review` | All ancestors merged, PR is open — send for review |
+| `create_pr` | All ancestors merged, no PR yet — open one |
+| `blocked` | Has at least one unmerged ancestor |
+| `merged` | Already merged |
+
+The `prioritized` array is sorted by that order — index 0 is always the
+highest-leverage action right now.
+
+Combine with other flags to scope the output:
+
+```bash
+grove --json --all          # all authors
+grove --json PLAT-12        # filtered by keyword
+grove --json | jq '.prioritized[0]'   # top action
+```
+
+See [AGENTS.md](./AGENTS.md) for how to use this output as LLM context.
 
 ## Understanding the tree
 
