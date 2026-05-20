@@ -318,7 +318,7 @@ async function main() {
 
     if (jsonOutput) {
       const out = buildJsonOutput(roots, nodeMap, trunk, `${owner}/${repo}`);
-      process.stdout.write(JSON.stringify(out, null, 2) + '\n');
+      process.stdout.write(JSON.stringify(out) + '\n');
       return;
     }
 
