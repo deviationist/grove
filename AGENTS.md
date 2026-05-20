@@ -105,6 +105,35 @@ I have 30 minutes before standup. Here is my PR stack:
 What's the single highest-leverage thing I can finish in that time?
 ```
 
+## Watch mode — reactive agent loop
+
+For agents that need to *react* to stack changes rather than poll on demand,
+use `--watch --json`. Grove emits a full NDJSON snapshot to stdout whenever
+state changes:
+
+```bash
+grove --watch --json | while IFS= read -r line; do
+  echo "$line" | your-agent-process
+done
+```
+
+Each line is a complete, self-contained JSON snapshot (same schema as
+`--json`). Parse with any JSON library — no partial reads or buffering needed.
+
+Control the polling interval with `--interval <seconds>` (default: 30):
+
+```bash
+grove --watch --json --interval 10   # faster for active development
+grove --watch --json --interval 60   # slower for background monitoring
+```
+
+**Event semantics:** Grove only emits when the serialized stack state changes.
+If nothing changes between polls, stdout stays silent. The first emit always
+fires immediately on startup.
+
+**Error handling:** Poll errors are written to stderr; the watch loop continues.
+Agents should handle both streams independently.
+
 ## Scripting
 
 ```bash
