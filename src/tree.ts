@@ -32,6 +32,18 @@ function sortNodes(nodes: TreeNode[]): void {
   for (const n of nodes) sortNodes(n.children);
 }
 
+// Remove merged nodes that have no open/draft descendants — they're done and
+// add noise. A merged node is kept only if it still has active children after
+// its own subtree is pruned (i.e. it's an ancestor in a live stack).
+function pruneFullyMerged(nodes: TreeNode[], nodeMap: Map<string, TreeNode>): TreeNode[] {
+  return nodes.filter(node => {
+    node.children = pruneFullyMerged(node.children, nodeMap);
+    if (node.status !== 'merged' || node.children.length > 0) return true;
+    nodeMap.delete(node.branch);
+    return false;
+  });
+}
+
 export async function buildTree(
   branches: Branch[],
   trunk: string,
@@ -103,5 +115,6 @@ export async function buildTree(
   }
 
   sortNodes(roots);
-  return { roots, nodeMap };
+  const prunedRoots = pruneFullyMerged(roots, nodeMap);
+  return { roots: prunedRoots, nodeMap };
 }
