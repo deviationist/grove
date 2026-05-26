@@ -1,7 +1,7 @@
 import { Branch, findParent, getMergeBaseAsync } from './git';
 import { PRInfo, CIStatus, ReviewStatus } from './github';
 
-export type BranchStatus = 'merged' | 'open' | 'draft' | 'no-pr';
+export type BranchStatus = 'merged' | 'closed' | 'open' | 'draft' | 'no-pr';
 
 export interface TreeNode {
   branch: string;
@@ -23,6 +23,7 @@ export interface TreeResult {
 function statusFromPR(pr: PRInfo | null): BranchStatus {
   if (!pr) return 'no-pr';
   if (pr.merged) return 'merged';
+  if (pr.state === 'closed') return 'closed';
   if (pr.draft) return 'draft';
   return 'open';
 }
@@ -38,7 +39,7 @@ function sortNodes(nodes: TreeNode[]): void {
 function pruneFullyMerged(nodes: TreeNode[], nodeMap: Map<string, TreeNode>): TreeNode[] {
   return nodes.filter(node => {
     node.children = pruneFullyMerged(node.children, nodeMap);
-    if (node.status !== 'merged' || node.children.length > 0) return true;
+    if ((node.status !== 'merged' && node.status !== 'closed') || node.children.length > 0) return true;
     nodeMap.delete(node.branch);
     return false;
   });

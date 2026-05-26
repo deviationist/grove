@@ -54,14 +54,14 @@ function unmergedAncestors(node: TreeNode, nodeMap: Map<string, TreeNode>): stri
   const blocked: string[] = [];
   let p = nodeMap.get(node.parent);
   while (p) {
-    if (p.status !== 'merged') blocked.push(p.branch);
+    if (p.status !== 'merged' && p.status !== 'closed') blocked.push(p.branch);
     p = nodeMap.get(p.parent);
   }
   return blocked;
 }
 
 function computeAction(node: TreeNode, blockedBy: string[]): Action {
-  if (node.status === 'merged') return 'merged';
+  if (node.status === 'merged' || node.status === 'closed') return 'merged';
   if (node.needsRebase) return 'needs_rebase';
   if (blockedBy.length > 0) return 'blocked';
   if (!node.pr) return 'create_pr';

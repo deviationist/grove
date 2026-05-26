@@ -31,6 +31,7 @@ function hyperlink(text: string, url: string): string {
 function icon(node: TreeNode): { char: string; wide: boolean } {
   switch (node.status) {
     case 'merged': return { char: '✅', wide: true  };
+    case 'closed': return { char: '✗',  wide: false };
     case 'open':   return { char: '●',  wide: false };
     case 'draft':  return { char: '◐',  wide: false };
     case 'no-pr':  return { char: '○',  wide: false };
@@ -40,6 +41,7 @@ function icon(node: TreeNode): { char: string; wide: boolean } {
 function colorize(node: TreeNode, text: string): string {
   switch (node.status) {
     case 'merged': return chalk.green(text);
+    case 'closed': return chalk.dim.red(text);
     case 'open':   return chalk.blue(text);
     case 'draft':  return chalk.gray(text);
     case 'no-pr':  return chalk.dim(text);
@@ -51,7 +53,7 @@ function ancestorsAllMerged(node: TreeNode, nodeMap: Map<string, TreeNode>): boo
   while (p) {
     const parent = nodeMap.get(p);
     if (!parent) break;
-    if (parent.status !== 'merged') return false;
+    if (parent.status !== 'merged' && parent.status !== 'closed') return false;
     p = parent.parent;
   }
   return true;
@@ -64,7 +66,7 @@ function join(parts: string[], sep = '  '): string {
 // Returns [rawText, coloredText] — no leading whitespace so both tree and
 // table modes can apply their own spacing.
 function annotate(node: TreeNode, nodeMap: Map<string, TreeNode>, stats: Stats): [string, string] {
-  if (node.status === 'merged') {
+  if (node.status === 'merged' || node.status === 'closed') {
     stats.merged++;
     return ['', ''];
   }

@@ -6,11 +6,14 @@ export interface GroveConfig {
   checks: boolean;
   /** Terminal output format. Default: "default". */
   format: 'default' | 'table';
+  /** Hide local branches that have no associated PR. Default: false. */
+  hideNoPr: boolean;
 }
 
 const DEFAULTS: GroveConfig = {
   checks: true,
   format: 'default',
+  hideNoPr: false,
 };
 
 export function loadConfig(repoRoot: string): GroveConfig {

@@ -46,6 +46,8 @@ OPTIONS
   --interval <secs>   Polling interval for --watch (default: 30)
   --no-checks         Skip CI and review state fetching (faster, offline-friendly)
   --table             Bordered table output instead of tree
+  --hide-no-pr        Hide local branches that have no associated PR
+  --show-no-pr        Show local branches without a PR (overrides config)
   --help              Show this help message
 
 FILTERING
@@ -74,6 +76,7 @@ function parseArgs(argv: string[]): {
   interval: number;
   noChecks: boolean;
   tableFormat: boolean;
+  hideNoPrFlag: boolean | undefined;
   showHelp: boolean;
 } {
   let filter: string | undefined;
@@ -86,6 +89,7 @@ function parseArgs(argv: string[]): {
   let interval = 30;
   let noChecks = false;
   let tableFormat = false;
+  let hideNoPrFlag: boolean | undefined;
   let showHelp = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -105,6 +109,10 @@ function parseArgs(argv: string[]): {
       noChecks = true;
     } else if (argv[i] === '--table') {
       tableFormat = true;
+    } else if (argv[i] === '--hide-no-pr') {
+      hideNoPrFlag = true;
+    } else if (argv[i] === '--show-no-pr') {
+      hideNoPrFlag = false;
     } else if (argv[i] === '--interval' && argv[i + 1]) {
       const n = parseInt(argv[++i], 10);
       if (!isNaN(n) && n > 0) interval = n;
@@ -115,7 +123,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, showHelp };
+  return { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, hideNoPrFlag, showHelp };
 }
 
 interface StackConfig {
@@ -127,6 +135,7 @@ interface StackConfig {
   authorArg?: string;
   filter?: string;
   checksEnabled: boolean;
+  hideNoPr: boolean;
 }
 
 interface StackResult {
@@ -136,7 +145,7 @@ interface StackResult {
 }
 
 async function buildStack(config: StackConfig): Promise<StackResult> {
-  const { owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled } = config;
+  const { owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled, hideNoPr } = config;
 
   const branchNames = branches.map(b => b.name).filter(n => n !== trunk);
   const [prMap, currentUser] = await Promise.all([
@@ -160,6 +169,7 @@ async function buildStack(config: StackConfig): Promise<StackResult> {
   const filteredLocal = branches.filter(b => {
     if (b.name === trunk) return true;
     const pr = prMap.get(b.name);
+    if (hideNoPr && !pr) return false;
     if (authorFilter && pr && pr.authorLogin !== authorFilter) return false;
     if (filter) {
       const q = filter.toLowerCase();
@@ -189,7 +199,7 @@ async function buildStack(config: StackConfig): Promise<StackResult> {
 
   if (checksEnabled) {
     const checkNodes = [...nodeMap.values()]
-      .filter(n => n.status !== 'merged' && !n.remote)
+      .filter(n => n.status !== 'merged' && n.status !== 'closed' && !n.remote)
       .map(n => ({ branch: n.branch, prNumber: n.pr?.number ?? null }));
 
     if (checkNodes.length > 0) {
@@ -213,13 +223,13 @@ function findFirstReadyUrl(
   nodeMap: Map<string, TreeNode>
 ): string | null {
   for (const node of nodes) {
-    if (node.status !== 'merged' && node.pr) {
+    if (node.status !== 'merged' && node.status !== 'closed' && node.pr) {
       let allMerged = true;
       let p = node.parent;
       while (p) {
         const parent = nodeMap.get(p);
         if (!parent) break;
-        if (parent.status !== 'merged') { allMerged = false; break; }
+        if (parent.status !== 'merged' && parent.status !== 'closed') { allMerged = false; break; }
         p = parent.parent;
       }
       if (allMerged) return node.pr.url;
@@ -290,7 +300,7 @@ async function runWatch(
 
 async function main() {
   try {
-    const { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, showHelp } =
+    const { filter, allAuthors, authorArg, openReady, jsonOutput, prettyJson, watch, interval, noChecks, tableFormat, hideNoPrFlag, showHelp } =
       parseArgs(process.argv.slice(2));
 
     if (showHelp) {
@@ -302,6 +312,7 @@ async function main() {
     const config = loadConfig(repoRoot);
     const checksEnabled = config.checks && !noChecks;
     const format: RenderFormat = tableFormat ? 'table' : config.format;
+    const hideNoPr = hideNoPrFlag ?? config.hideNoPr;
 
     // Auto-enable JSON when running under rtk (unless user explicitly chose a visual format)
     const effectiveJsonOutput = jsonOutput || (!tableFormat && !watch && isUnderRtk());
@@ -312,7 +323,7 @@ async function main() {
 
     if (watch) {
       process.once('SIGINT', () => { process.stdout.write('\n'); process.exit(130); });
-      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled }, effectiveJsonOutput, interval, format);
+      await runWatch({ owner, repo, trunk, allAuthors, authorArg, filter, checksEnabled, hideNoPr }, effectiveJsonOutput, interval, format);
       return;
     }
 
@@ -323,7 +334,7 @@ async function main() {
     process.once('SIGINT', () => { spinner.stop(); process.exit(130); });
 
     const { roots, nodeMap, authorFilter } = await buildStack({
-      owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled,
+      owner, repo, trunk, branches, allAuthors, authorArg, filter, checksEnabled, hideNoPr,
     });
 
     spinner.stop();
